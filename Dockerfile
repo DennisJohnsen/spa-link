@@ -1,24 +1,28 @@
-FROM ruby:3-alpine
-LABEL org.opencontainers.image.source="https://github.com/jshank/bwalink"
+# Use the official Ruby image from the Docker Hub with ARM64 support
+FROM ruby:2.7-alpine3.14
 
-# Fix for dev tools from https://renehernandez.io/snippets/install-development-tools-in-alpine/
-# This also adds the build-base, uses it and then wipes out the tools to keep the image small
-# Installing socat to link the serial over IP device
-RUN apk update && apk add --no-cache build-base && \
+# Install necessary packages and tools
+RUN apk update && apk add --no-cache \
+    build-base \
+    socat \
+    tzdata && \
+    # Install ffi directly
+    gem install ffi -v 1.17.0 && \
+    # Set bundler to deployment mode and install the application
     bundle config set deployment 'true' && \
     gem install balboa_worldwide_app && \
-    apk add --no-cache socat tzdata && \
+    # Clean up build dependencies
     apk del build-base && \
     rm -rf /var/cache/apk/*
 
-# See https://iotbyhvm.ooo/using-uris-to-connect-to-a-mqtt-server/ for MQTT_URI format
-# BRIDGE_IP and BRIDGE_PORT are the address and port for your serial to IP device or 
-# host running ser2net, socat or ESPEasy serial server
-ENV MQTT_URI=mqtt://balboa:balboa@10.1.10.2 \
-    BRIDGE_IP=10.1.12.127 \
+# Environment variables
+ENV MQTT_URI=mqtt://admin:hqdmv4AneEY8@192.168.1.100 \
+    BRIDGE_IP=192.168.1.102 \
     BRIDGE_PORT=8899
 
-ADD docker-entrypoint.sh /
+# Copy the entrypoint script
+COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
-ENTRYPOINT [ "/docker-entrypoint.sh" ]
+# Define the entrypoint
+ENTRYPOINT ["/docker-entrypoint.sh"]
